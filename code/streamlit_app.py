@@ -25,6 +25,15 @@ st.markdown(
 # Initialize session state for pagination
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
+# Initialize session state for filters
+if 'selected_origin_continents' not in st.session_state:
+    st.session_state.selected_origin_continents = []
+if 'selected_receiving_continents' not in st.session_state:
+    st.session_state.selected_receiving_continents = []
+if 'selected_origin_country' not in st.session_state:
+    st.session_state.selected_origin_country = []
+if 'selected_receiving_country' not in st.session_state:
+    st.session_state.selected_receiving_country = []
 
 # Load data
 @st.cache_data
@@ -42,23 +51,23 @@ st.sidebar.title("🔍 Filters")
 
 with st.sidebar.expander("Location", expanded=True):
     continents = sorted(df['origin_continent'].unique())
-    selected_origin_continents = st.multiselect("Origin Continent", continents)
+    st.multiselect("Origin Continent", continents, key='selected_origin_continents')
 
-    if selected_origin_continents:
-        origin_countries = sorted(df[df['origin_continent'].isin(selected_origin_continents)]['origin_country'].unique())
-        selected_origin_country = st.multiselect("Origin Country", origin_countries)
+    if st.session_state.selected_origin_continents:
+        origin_countries = sorted(df[df['origin_continent'].isin(st.session_state.selected_origin_continents)]['origin_country'].unique())
+        st.multiselect("Origin Country", origin_countries, key='selected_origin_country')
     else:
-        selected_origin_country = None
+        st.session_state.selected_origin_country = []
 
     st.divider()
 
-    selected_receiving_continents = st.multiselect ("Receiving Continent", continents)
+    st.multiselect("Receiving Continent", continents, key='selected_receiving_continents')
 
-    if selected_receiving_continents:
-        receiving_countries = sorted(df[df['receiving_continent'].isin(selected_receiving_continents)]['receiving_country'].unique())
-        selected_receiving_country = st.multiselect("Receiving Country", receiving_countries)
+    if st.session_state.selected_receiving_continents:
+        receiving_countries = sorted(df[df['receiving_continent'].isin(st.session_state.selected_receiving_continents)]['receiving_country'].unique())
+        st.multiselect("Receiving Country", receiving_countries, key='selected_receiving_country')
     else:
-        selected_receiving_country = None
+        st.session_state.selected_receiving_country = []
 
 with st.sidebar.expander("Distance",expanded=True):
     min_dist, max_dist = int(df['distance'].min()), int(df['distance'].max())
@@ -77,14 +86,14 @@ with st.sidebar.expander("Dates", expanded=True):
 
 # Apply filters
 filtered_df = df.copy()
-if selected_origin_continents:
-    filtered_df = filtered_df[filtered_df['origin_continent'].isin(selected_origin_continents)]
-if selected_origin_country:
-    filtered_df = filtered_df[filtered_df['origin_country'].isin(selected_origin_country)]
-if selected_receiving_continents:
-    filtered_df = filtered_df[filtered_df['receiving_continent'].isin(selected_receiving_continents)]
-if selected_receiving_country:
-    filtered_df = filtered_df[filtered_df['receiving_country'].isin(selected_receiving_country)]
+if st.session_state.selected_origin_continents:
+    filtered_df = filtered_df[filtered_df['origin_continent'].isin(st.session_state.selected_origin_continents)]
+if st.session_state.selected_origin_country:
+    filtered_df = filtered_df[filtered_df['origin_country'].isin(st.session_state.selected_origin_country)]
+if st.session_state.selected_receiving_continents:
+    filtered_df = filtered_df[filtered_df['receiving_continent'].isin(st.session_state.selected_receiving_continents)]
+if st.session_state.selected_receiving_country:
+    filtered_df = filtered_df[filtered_df['receiving_country'].isin(st.session_state.selected_receiving_country)]
 filtered_df = filtered_df[(filtered_df['distance'] >= dist_range[0]) & (filtered_df['distance'] <= dist_range[1])]
 
 # Apply date filters (only if range selection is complete)
@@ -121,5 +130,3 @@ if selected == 0:
     list_view(filtered_df)
 elif selected == 2:
     map_view(filtered_df)
-
-
