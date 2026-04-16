@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 from streamlit_extras.stylable_container import stylable_container
+from streamlit_extras.card_selector import *
 
 # Page configuration
 st.set_page_config(page_title="Postcard Viewer", layout="wide")
@@ -26,7 +27,7 @@ if 'current_page' not in st.session_state:
 # Load data
 @st.cache_data
 def load_data():
-    with open('data.json', 'r') as f:
+    with open('../data.json', 'r') as f:
         data = json.load(f)
     return pd.DataFrame(data)
 
@@ -37,7 +38,7 @@ df['date_received'] = pd.to_datetime(df['date_received'])
 # --- Dialog for Postcard Preview ---
 @st.dialog("Postcard Details", width="large")
 def show_postcard_details(item):
-    img_path = os.path.join("Images", item['name'])
+    img_path = os.path.join("../Images", item['name'])
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -125,7 +126,7 @@ with st.container(height=700, border=True):
             batch = page_df.iloc[i : i + cols_per_row]
             
             for j, (idx, item) in enumerate(batch.iterrows()):
-                img_path = os.path.join("Images", item['name'])
+                img_path = os.path.join("../Images", item['name'])
                 with cols[j]:
                     if os.path.exists(img_path):
                         # Show the image with uniform height
