@@ -22,40 +22,39 @@ def list_view(filtered_df):
     page_df = filtered_df.iloc[start_idx:end_idx]
 
     # Scrollable Window
-    with st.container(height=700, border=True):
-        if page_df.empty:
-            st.info("No postcards match the selected filters.")
-        else:
-            # We use a grid layout. Streamlit columns will normalize the width.
-            cols_per_row = 4
-            for i in range(0, len(page_df), cols_per_row):
-                cols = st.columns(cols_per_row)
-                batch = page_df.iloc[i: i + cols_per_row]
+    if page_df.empty:
+        st.info("No postcards match the selected filters.")
+    else:
+        # We use a grid layout. Streamlit columns will normalize the width.
+        cols_per_row = 4
+        for i in range(0, len(page_df), cols_per_row):
+            cols = st.columns(cols_per_row)
+            batch = page_df.iloc[i: i + cols_per_row]
 
-                for j, (idx, item) in enumerate(batch.iterrows()):
-                    img_path = os.path.join("../Images", item['name'])
-                    with cols[j]:
-                        if os.path.exists(img_path):
-                            # Show the image with uniform height
-                            with stylable_container(
-                                    key=f"custom_style_{img_path}",
-                                    css_styles="""
-                                    img {
-                                        width: 100%;
-                                        height: 200px;
-                                        object-fit: fill;
-                                        padding : 5px;
-                                        border-radius: 10px;
-                                    }
+            for j, (idx, item) in enumerate(batch.iterrows()):
+                img_path = os.path.join("../Images", item['name'])
+                with cols[j]:
+                    if os.path.exists(img_path):
+                        # Show the image with uniform height
+                        with stylable_container(
+                                key=f"custom_style_{img_path}",
+                                css_styles="""
+                                img {
+                                    width: 100%;
+                                    height: 200px;
+                                    object-fit: fill;
+                                    padding : 5px;
+                                    border-radius: 10px;
+                                }
 
-                                """
-                            ):
-                                st.image(img_path, width='stretch')
-                            # Restore the visible button
-                            if st.button(f"View {item['id']}", key=f"btn_{item['id']}", width='stretch'):
-                                show_postcard_details(item)
-                        else:
-                            st.error(f"Missing: {item['name']}")
+                            """
+                        ):
+                            st.image(img_path, width='stretch')
+                        # Restore the visible button
+                        if st.button(f"View {item['id']}", key=f"btn_{item['id']}", width='stretch'):
+                            show_postcard_details(item)
+                    else:
+                        st.error(f"Missing: {item['name']}")
 
     # --- Bottom Pagination UI ---
     st.divider()
