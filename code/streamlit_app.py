@@ -29,7 +29,7 @@ if 'current_page' not in st.session_state:
 # Load data
 @st.cache_data
 def load_data():
-    with open('../data.json', 'r') as f:
+    with open('../data/data_with_geography.json', 'r') as f:
         data = json.load(f)
     return pd.DataFrame(data)
 
