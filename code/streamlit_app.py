@@ -41,11 +41,24 @@ df['date_received'] = pd.to_datetime(df['date_received'])
 st.sidebar.title("🔍 Filters")
 
 with st.sidebar.expander("Location", expanded=True):
-    origin_countries = sorted(df['origin_country'].unique())
-    selected_origin = st.multiselect("Origin Country", origin_countries)
+    continents = sorted(df['origin_continent'].unique())
+    selected_origin_continents = st.multiselect("Origin Continent", continents)
 
-    receiving_countries = sorted(df['receiving_country'].unique())
-    selected_receiving = st.multiselect("Receiving Country", receiving_countries)
+    if selected_origin_continents:
+        origin_countries = sorted(df[df['origin_continent'].isin(selected_origin_continents)]['origin_country'].unique())
+        selected_origin_country = st.multiselect("Origin Country", origin_countries)
+    else:
+        selected_origin_country = None
+
+    st.divider()
+
+    selected_receiving_continents = st.multiselect ("Receiving Continent", continents)
+
+    if selected_receiving_continents:
+        receiving_countries = sorted(df[df['receiving_continent'].isin(selected_receiving_continents)]['receiving_country'].unique())
+        selected_receiving_country = st.multiselect("Receiving Country", receiving_countries)
+    else:
+        selected_receiving_country = None
 
 with st.sidebar.expander("Distance",expanded=True):
     min_dist, max_dist = int(df['distance'].min()), int(df['distance'].max())
@@ -64,10 +77,14 @@ with st.sidebar.expander("Dates", expanded=True):
 
 # Apply filters
 filtered_df = df.copy()
-if selected_origin:
-    filtered_df = filtered_df[filtered_df['origin_country'].isin(selected_origin)]
-if selected_receiving:
-    filtered_df = filtered_df[filtered_df['receiving_country'].isin(selected_receiving)]
+if selected_origin_continents:
+    filtered_df = filtered_df[filtered_df['origin_continent'].isin(selected_origin_continents)]
+if selected_origin_country:
+    filtered_df = filtered_df[filtered_df['origin_country'].isin(selected_origin_country)]
+if selected_receiving_continents:
+    filtered_df = filtered_df[filtered_df['receiving_continent'].isin(selected_receiving_continents)]
+if selected_receiving_country:
+    filtered_df = filtered_df[filtered_df['receiving_country'].isin(selected_receiving_country)]
 filtered_df = filtered_df[(filtered_df['distance'] >= dist_range[0]) & (filtered_df['distance'] <= dist_range[1])]
 
 # Apply date filters (only if range selection is complete)
