@@ -2,6 +2,9 @@ import streamlit as st
 import json
 import os
 import pandas as pd
+import torch
+import numpy as np
+from transformers import CLIPProcessor, CLIPModel
 from streamlit_extras.card_selector import *
 
 from list_view import list_view
@@ -35,10 +38,60 @@ if 'selected_origin_country' not in st.session_state:
 if 'selected_receiving_country' not in st.session_state:
     st.session_state.selected_receiving_country = []
 
+@st.cache_resource
+def load_clip_model():
+    # Load model and processor matching your generation script
+    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
+    model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32')
+    model.eval()
+    return processor, model
+
+
+def filter_by_semantic_search(df, query, threshold=0.23):
+    if not query:
+        return df
+
+    processor, model = load_clip_model()
+
+    # Vectorize the text query
+    inputs = processor(text=[query], return_tensors="pt", padding=True)
+    with torch.no_grad():
+        outputs = model.get_text_features(**inputs)
+
+    if hasattr(outputs, 'text_embeds'):
+        features = outputs.text_embeds
+    elif hasattr(outputs, 'pooler_output'):
+        features = outputs.pooler_output
+    else:
+        features = outputs
+
+    text_vector = features.squeeze().cpu().numpy()
+    text_vector /= np.linalg.norm(text_vector)
+
+    # Calculate similarity scores
+    scores = []
+    for emb in df['embedding']:
+        if emb is not None:
+            emb_arr = np.array(emb)
+            emb_norm = np.linalg.norm(emb_arr)
+            if emb_norm > 0:
+                score = np.dot(text_vector, emb_arr) / emb_norm
+                scores.append(score)
+                continue
+        scores.append(-1.0)
+
+    df = df.copy()
+    df['search_score'] = scores
+
+    # FILTER BY THRESHOLD INSTEAD OF TOP N
+    filtered = df[df['search_score'] >= threshold].sort_values(by='search_score', ascending=False)
+
+    return filtered
+
 # Load data
 @st.cache_data
 def load_data():
-    with open('../data/data_with_geography.json', 'r') as f:
+    with open('../data/data_with__geography_embeddings.json', 'r') as f:
         data = json.load(f)
     return pd.DataFrame(data)
 
@@ -48,6 +101,12 @@ df['date_received'] = pd.to_datetime(df['date_received'])
 
 # --- Sidebar Filters ---
 st.sidebar.title("🔍 Filters")
+
+search_query = st.sidebar.text_input(
+    "Semantic Image Search",
+    placeholder="e.g., mountain sunset, city lights...",
+    help="Uses CLIP embeddings to search the visual content of the postcards."
+)
 
 with st.sidebar.expander("Location", expanded=True):
     continents = sorted(df['origin_continent'].unique())
@@ -101,6 +160,8 @@ if isinstance(sent_range, (list, tuple)) and len(sent_range) == 2:
     filtered_df = filtered_df[(filtered_df['date_sent'].dt.date >= sent_range[0]) & (filtered_df['date_sent'].dt.date <= sent_range[1])]
 if isinstance(received_range, (list, tuple)) and len(received_range) == 2:
     filtered_df = filtered_df[(filtered_df['date_received'].dt.date >= received_range[0]) & (filtered_df['date_received'].dt.date <= received_range[1])]
+if search_query:
+    filtered_df = filter_by_semantic_search(filtered_df, search_query)
 
 # --- Main Area ---
 st.title("📮 Postcard Collection")
