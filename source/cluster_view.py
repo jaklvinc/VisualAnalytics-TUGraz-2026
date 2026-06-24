@@ -3,6 +3,8 @@ import numpy as np
 import os
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA
+from streamlit_extras.stylable_container import stylable_container
+from details import show_postcard_details
 
 
 # --- Callbacks for guaranteed state accuracy ---
@@ -42,7 +44,6 @@ def cluster_view(df):
     if st.session_state.cluster_history:
         cols = st.columns(len(st.session_state.cluster_history) + 1)
 
-        # Using on_click for immediate state updates
         cols[0].button("🏠 Main Collections", key="btn_home", on_click=navigate_up, args=(-1,))
 
         for idx, history_node in enumerate(st.session_state.cluster_history):
@@ -59,17 +60,39 @@ def cluster_view(df):
     total_items = len(current_df)
     depth = len(st.session_state.cluster_history)
 
-    # --- 5. Render Leaf Nodes (Increased cutoff to 10) ---
+    # --- 5. Render Leaf Nodes (Matches list_view.py style) ---
     if total_items <= 10 or depth >= 4:
         st.info(f"📍 Showing final selection list ({total_items} postcards)")
 
-        grid_cols = st.columns(3)
-        for idx, (_, row) in enumerate(current_df.iterrows()):
-            with grid_cols[idx % 3]:
-                img_path = os.path.join("../Images", row['name'])
-                if os.path.exists(img_path):
-                    st.image(img_path, use_container_width=True)
-                st.caption(f"**ID:** {row['id']} | **From:** {row['origin_country']}")
+        cols_per_row = 4
+        for i in range(0, len(current_df), cols_per_row):
+            cols = st.columns(cols_per_row)
+            batch = current_df.iloc[i: i + cols_per_row]
+
+            for j, (idx, item) in enumerate(batch.iterrows()):
+                img_path = os.path.join("../Images", item['name'])
+                with cols[j]:
+                    if os.path.exists(img_path):
+                        # Match the styling from list_view exactly with !important
+                        with stylable_container(
+                                key=f"leaf_style_{item['id']}",
+                                css_styles="""
+                                                        img {
+                                                            width: 100% !important;
+                                                            height: 200px !important;
+                                                            object-fit: fill !important;
+                                                            padding : 5px !important;
+                                                            border-radius: 10px !important;
+                                                        }
+                                                    """
+                        ):
+                            st.image(img_path, width='stretch')
+
+                        # Add details button
+                        if st.button(f"View {item['id']}", key=f"btn_leaf_{item['id']}", use_container_width=True):
+                            show_postcard_details(item)
+                    else:
+                        st.error(f"Missing: {item['name']}")
         return
 
     # --- 6. Hierarchical Clustering ---
@@ -121,11 +144,23 @@ def cluster_view(df):
                     for k, (_, row) in enumerate(chunk.iterrows()):
                         img_path = os.path.join("../Images", row['name'])
                         if os.path.exists(img_path):
-                            p_cols[k].image(img_path, use_container_width=True)
+                            # Force a strict 100px height using !important
+                            with stylable_container(
+                                    key=f"thumb_style_{row['id']}_{depth}_{c_id}",
+                                    css_styles="""
+                                                img {
+                                                    width: 100% !important;
+                                                    height: 100px !important;
+                                                    object-fit: fill !important;
+                                                    padding : 2px !important;
+                                                    border-radius: 5px !important;
+                                                }
+                                                """
+                            ):
+                                p_cols[k].image(img_path, width='stretch')
 
                 btn_key = f"btn_explore_lvl{depth}_c{c_id}"
 
-                # --- The Fix: Using on_click to pass exact IDs before script reruns ---
                 st.button(
                     "Explore Group",
                     key=btn_key,
