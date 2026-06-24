@@ -27,6 +27,9 @@ def map_view(df):
     # Drop rows where coordinates might be missing
     path_counts.dropna(subset=['origin_continent_coord', 'receiving_continent_coord'], inplace=True)
 
+    # Sort by count descending to render thickest arcs first (in the background)
+    path_counts.sort_values(by='count', ascending=False, inplace=True)
+
     if path_counts.empty:
         st.warning("No postcard paths to display for the selected filters.")
         return
@@ -40,9 +43,12 @@ def map_view(df):
         get_target_position="receiving_continent_coord",
         get_source_color=[64, 255, 0, 160],  # Green for origin
         get_target_color=[255, 0, 64, 160],  # Red for destination
-        get_width='count / 50',  # Scale arc width by postcard count
+        get_width='count/50',  # Scale arc width by postcard count
+        get_tilt=10,
         pickable=True,
         auto_highlight=True,
+        numSegments=2,
+        widthMinPixels=2
     )
 
     deck = pdk.Deck(
@@ -51,7 +57,7 @@ def map_view(df):
                 latitude=20,
                 longitude=0,
                 zoom=1,
-                pitch=45,
+                pitch=0,
             ),
             layers=[arc_layer],
             tooltip={"html": "<b>{count}</b> postcards from {origin_continent} to {receiving_continent}"}
