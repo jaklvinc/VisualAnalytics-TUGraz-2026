@@ -9,6 +9,7 @@ from streamlit_extras.card_selector import *
 
 from list_view import list_view
 from map_view import map_view
+from cluster_view import cluster_view
 
 # Page configuration
 st.set_page_config(page_title="Postcard Viewer", layout="wide")
@@ -189,5 +190,7 @@ selected = card_selector(
 
 if selected == 0:
     list_view(filtered_df)
+elif selected == 1:
+    cluster_view(filtered_df)
 elif selected == 2:
     map_view(filtered_df)
